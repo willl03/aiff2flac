@@ -13,7 +13,6 @@ fi
 
 
 pushd "$1"
-rm *.flac; rm *.jpeg
 #for FILE in *.aiff; 
 for FILE in *.aiff;
 do 
