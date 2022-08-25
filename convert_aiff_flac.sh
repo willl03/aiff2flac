@@ -1,18 +1,18 @@
 #!/bin/bash
 
 #converts all the aiffs in a director to flac and preserves the artwork too
-AIFF_DIR=$1
+#AIFF_DIR=$1
 
-echo "working in $AIFF_DIR"
+#echo "working in $AIFF_DIR"
 
-if test -z "$AIFF_DIR" 
-then
-	echo "no input dir given"
-	exit
-fi
+#if test -z "$AIFF_DIR" 
+#then
+#	echo "no input dir given"
+#	exit
+#fi
 
 
-pushd "$1"
+#pushd "$1"
 #for FILE in *.aiff; 
 for FILE in *.aiff;
 do 
@@ -46,6 +46,6 @@ done
 
 
 rm *_tmp_*
-popd
+#popd
 
 
