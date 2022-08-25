@@ -25,14 +25,14 @@ do
 
 	COVER="$TMP_FILE.jpeg"
 	#extract the cover
-	ffmpeg -i "$FILE" -an -vcodec copy "$COVER"
+	ffmpeg -y -i "$FILE" -an -vcodec copy "$COVER"
 
 	TRIMMED=$(echo "$FILE" | cut -f 1 -d '.')
 
 	#if the aiff has cover art, do some extra work to preserve it
 	if test -f "$COVER"; then
 		#convert aiff to a temporary flac
-		ffmpeg -i "$FILE" -write_id3v2 1 -c:v copy "$TMP_FILE"
+		ffmpeg -y -i "$FILE" -write_id3v2 1 -c:v copy "$TMP_FILE"
 
 		#scale the cover to 600x600px (flac breaks on anything > 600)
 		#next line is for mac
@@ -41,9 +41,9 @@ do
 		convert "$COVER" -resize 600 "$COVER"
 
 		#write a new flac including the cover. could i somehow do this without a tmp flac? probably. but bash sucks
-		ffmpeg -i "$TMP_FILE" -i "$COVER" -map 0:a -map 1 -codec copy -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (front)" -disposition:v attached_pic "$TRIMMED.flac"
+		ffmpeg -y -i "$TMP_FILE" -i "$COVER" -map 0:a -map 1 -codec copy -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (front)" -disposition:v attached_pic "$TRIMMED.flac"
 	else
-		ffmpeg -i "$FILE" -write_id3v2 1 -c:v copy "$TRIMMED.flac"
+		ffmpeg -y -i "$FILE" -write_id3v2 1 -c:v copy "$TRIMMED.flac"
 	fi
 
 done
