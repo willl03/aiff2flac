@@ -42,6 +42,10 @@ do
 		ffmpeg -i "$FILE" -write_id3v2 1 -c:v copy "$TRIMMED.flac"
 	fi
 
+	#create AIFF-BAK folder, move the AIFF file to it
+	mkdir AIFF-BAK
+	mv "$FILE" AIFF-BAK
+
 done
 
 
