@@ -46,6 +46,18 @@ do
 		ffmpeg -y -i "$FILE" -write_id3v2 1 -c:v copy "$TRIMMED.flac"
 	fi
 
+	#export tags to txt file
+	metaflac --export-tags-to="$TRIMMED._tmp_.txt" "$TRIMMED.flac"
+
+	#rename description to comment in the txt file
+	sed -i 's/DESCRIPTION=/comment=/g' "$TRIMMED._tmp_.txt"
+
+	#remove previous tags (cover art is untouched)
+	metaflac --remove-all-tags "$TRIMMED.flac"
+
+	#import tags from txt file
+	metaflac --import-tags-from="$TRIMMED._tmp_.txt" "$TRIMMED.flac"
+
 done
 
 rm *_tmp_*
