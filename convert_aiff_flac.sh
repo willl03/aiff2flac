@@ -58,6 +58,10 @@ do
 	#import tags from txt file
 	metaflac --import-tags-from="$TRIMMED._tmp_.txt" "$TRIMMED.flac"
 
+	#create AIFF-BAK folder, move the AIFF file to it
+	mkdir AIFF-BAK
+	mv "$FILE" AIFF-BAK
+
 done
 
 rm *_tmp_*
