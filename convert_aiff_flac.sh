@@ -11,6 +11,11 @@
 #	exit
 #fi
 
+# linux packages, cli flac metadata edit and image resize
+# sudo apt install flac
+# sudo apt install imagemagick
+# sudo apt install ffmpeg
+
 #pushd "$1"
 #for FILE in *.aiff; 
 for FILE in *.aiff;
@@ -30,7 +35,10 @@ do
 		ffmpeg -i "$FILE" -write_id3v2 1 -c:v copy "$TMP_FILE"
 
 		#scale the cover to 600x600px (flac breaks on anything > 600)
-		sips -Z 600 "$COVER"
+		#next line is for mac
+		#sips -Z 600 "$COVER"
+		#next line is for linux
+		convert "$COVER" -resize 600 "$COVER"
 
 		#write a new flac including the cover. could i somehow do this without a tmp flac? probably. but bash sucks
 		ffmpeg -i "$TMP_FILE" -i "$COVER" -map 0:a -map 1 -codec copy -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (front)" -disposition:v attached_pic "$TRIMMED.flac"
