@@ -13,8 +13,8 @@ fi
 
 
 pushd "$1"
-#for FILE in *.aiff; 
-for FILE in *.aiff;
+shopt -s nullglob nocaseglob
+for FILE in *.aif *.aiff;
 do 
 	echo "FILE: $FILE \n"
 	TMP_FILE="$FILE._tmp_.flac"
