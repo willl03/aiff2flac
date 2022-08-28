@@ -11,45 +11,44 @@ shopt -s nullglob nocaseglob
 for FILE in *.aif *.aiff;
 do 
 	echo "FILE: $FILE \n"
-	TMP_FILE="$FILE._tmp_.flac"
-	COVER="$TMP_FILE.jpeg"
+
+	TRIMMED="${FILE%.*}"
+	TMP_COVER="$TRIMMED._tmp_.jpeg"
+	TMP_TXT="$TRIMMED._tmp_.txt"
+	OUT_FLAC="$TRIMMED.flac"
 
 	#extract the cover
-	ffmpeg -y -i "$FILE" -an -vcodec copy "$COVER"
-
-	FILENAME=$(basename -- "$FILE")
-	TRIMMED="${FILENAME%.*}"
+	ffmpeg -y -i "$FILE" -an -vcodec copy "$TMP_COVER"
 
 	#if the aiff has cover art, do some extra work to preserve it
-	if test -f "$COVER"; then
-		#convert aiff to a temporary flac
-		ffmpeg -y -i "$FILE" -write_id3v2 1 -c:v copy "$TMP_FILE"
+	if test -f "$TMP_COVER"; then
 
 		#scale the cover to 600x600px (flac breaks on anything > 600)
 		#next line is for linux
-		convert "$COVER" -resize 600 "$COVER"
+		convert "$TMP_COVER" -resize 600 "$TMP_COVER"
 
-		#write a new flac including the cover. could i somehow do this without a tmp flac? probably. but bash sucks
-		ffmpeg -y -i "$TMP_FILE" -i "$COVER" -map 0:a -map 1 -codec copy -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (front)" -disposition:v attached_pic "$TRIMMED.flac"
+		#write flac from aiff including the reiszed cover
+		ffmpeg -y -i "$FILE" -i "$TMP_COVER" -map 0:a -map 1:v -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (front)" -disposition:v attached_pic -c:v copy "$OUT_FLAC"
 	else
-		ffmpeg -y -i "$FILE" -write_id3v2 1 -c:v copy "$TRIMMED.flac"
+		ffmpeg -y -i "$FILE" -write_id3v2 1 -c:v copy "$OUT_FLAC"
 	fi
 
 	#export tags to txt file
-	metaflac --export-tags-to="$TRIMMED._tmp_.txt" "$TRIMMED.flac"
+	metaflac --export-tags-to="$TMP_TXT" "$OUT_FLAC"
 
 	#rename description to comment in the txt file
-	sed -i 's/DESCRIPTION=/comment=/g' "$TRIMMED._tmp_.txt"
+	sed -i 's/DESCRIPTION=/comment=/g' "$TMP_TXT"
 
 	#remove previous tags (cover art is untouched)
-	metaflac --remove-all-tags "$TRIMMED.flac"
+	metaflac --remove-all-tags "$OUT_FLAC"
 
 	#import tags from txt file
-	metaflac --import-tags-from="$TRIMMED._tmp_.txt" "$TRIMMED.flac"
+	metaflac --import-tags-from="$TMP_TXT" "$OUT_FLAC"
 
 	#create AIFF-BAK folder, move the AIFF file to it
 	mkdir AIFF-BAK
 	mv "$FILE" AIFF-BAK
 
+	#remove temp cover and metadata files
 	rm *_tmp_*
 done
