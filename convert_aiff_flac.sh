@@ -1,29 +1,19 @@
 #!/bin/bash
 
 #converts all the aiffs in a director to flac and preserves the artwork too
-#AIFF_DIR=$1
-
-#echo "working in $AIFF_DIR"
-
-#if test -z "$AIFF_DIR" 
-#then
-#	echo "no input dir given"
-#	exit
-#fi
 
 # linux packages, cli flac metadata edit and image resize
 # sudo apt install flac
 # sudo apt install imagemagick
 # sudo apt install ffmpeg
 
-#pushd "$1"
 shopt -s nullglob nocaseglob
 for FILE in *.aif *.aiff;
 do 
 	echo "FILE: $FILE \n"
 	TMP_FILE="$FILE._tmp_.flac"
-
 	COVER="$TMP_FILE.jpeg"
+
 	#extract the cover
 	ffmpeg -y -i "$FILE" -an -vcodec copy "$COVER"
 
@@ -36,8 +26,6 @@ do
 		ffmpeg -y -i "$FILE" -write_id3v2 1 -c:v copy "$TMP_FILE"
 
 		#scale the cover to 600x600px (flac breaks on anything > 600)
-		#next line is for mac
-		#sips -Z 600 "$COVER"
 		#next line is for linux
 		convert "$COVER" -resize 600 "$COVER"
 
@@ -65,4 +53,3 @@ do
 
 	rm *_tmp_*
 done
-#popd
