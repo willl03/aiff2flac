@@ -63,7 +63,6 @@ do
 	mkdir AIFF-BAK
 	mv "$FILE" AIFF-BAK
 
+	rm *_tmp_*
 done
-
-rm *_tmp_*
 #popd
