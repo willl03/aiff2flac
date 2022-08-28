@@ -27,7 +27,8 @@ do
 	#extract the cover
 	ffmpeg -y -i "$FILE" -an -vcodec copy "$COVER"
 
-	TRIMMED=$(echo "$FILE" | cut -f 1 -d '.')
+	FILENAME=$(basename -- "$FILE")
+	TRIMMED="${FILENAME%.*}"
 
 	#if the aiff has cover art, do some extra work to preserve it
 	if test -f "$COVER"; then
