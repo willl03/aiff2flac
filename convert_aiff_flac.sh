@@ -38,6 +38,7 @@ do
 
 	#rename description to comment in the txt file
 	sed -i 's/DESCRIPTION=/comment=/g' "$TMP_TXT"
+	sed -i 's/TKEY=/INITIALKEY=/g' "$TMP_TXT"
 
 	#remove previous tags (cover art is untouched)
 	metaflac --remove-all-tags "$OUT_FLAC"
