@@ -34,7 +34,7 @@ do
 		#write flac including the reiszed cover
 		ffmpeg -y -i "$FILE" -i "$TMP_COVER" -map 0:a -map 1:v -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (front)" -disposition:v attached_pic -c:v copy "$TMP_FLAC"
 	else
-		ffmpeg -y -i "$FILE" -write_id3v2 1 -c:v copy "$TMP_FLAC"
+		ffmpeg -y -i "$FILE" -c:v copy "$TMP_FLAC"
 	fi
 
 	#export tags to txt file
