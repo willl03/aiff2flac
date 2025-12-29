@@ -10,7 +10,7 @@
 # sudo apt install ffmpeg
 
 shopt -s nullglob nocaseglob
-for FILE in *.aif *.aiff *.wav *.flac;
+for FILE in *.aif *.aiff *.wav *.flac *.m4a;
 do 
 	echo "FILE: $FILE \n"
 
