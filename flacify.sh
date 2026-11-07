@@ -1,62 +1,94 @@
 #!/bin/bash
+# Reencode WAV, AIF, FLAC, and M4A to FLAC with proper tags and 600x600 artwork for Rekordbox + Traktor
 
-# Reencode WAV, AIF and FLAC to FLAC with proper tags and artwork for Rekordbox + Traktor
+TARGETS=()
 
-# to add the flacify command system wide:
-# sudo ln -s /your_path_to/flacify.sh /usr/local/bin/flacify
+# If paths are passed via CLI/Dolphin (%F), process those. Otherwise default to current working directory.
+if [ "$#" -gt 0 ]; then
+    for arg in "$@"; do
+        if [ -d "$arg" ]; then
+            while IFS= read -r -d '' f; do
+                TARGETS+=("$f")
+            done < <(find "$arg" -maxdepth 1 -type f \( -iname "*.aif" -o -iname "*.aiff" -o -iname "*.wav" -o -iname "*.flac" -o -iname "*.m4a" \) -print0)
+        elif [ -f "$arg" ]; then
+            TARGETS+=("$arg")
+        fi
+    done
+else
+    shopt -s nullglob nocaseglob
+    TARGETS=(*.aif *.aiff *.wav *.flac *.m4a)
+fi
 
-# linux packages, cli flac metadata edit and image resize
-# sudo apt install flac
-# sudo apt install imagemagick
-# sudo apt install ffmpeg
+if [ ${#TARGETS[@]} -eq 0 ]; then
+    echo "No supported audio files found."
+    exit 0
+fi
 
-shopt -s nullglob nocaseglob
-for FILE in *.aif *.aiff *.wav *.flac *.m4a;
-do 
-	echo "FILE: $FILE \n"
+for FILE in "${TARGETS[@]}"; do
+    echo -e "\n=========================================="
+    echo "Processing: $FILE"
+    echo "=========================================="
 
-	TRIMMED="${FILE%.*}"
-	TMP_COVER="TMP_$TRIMMED.jpeg"
-	TMP_TXT="TMP_$TRIMMED.txt"
-	TMP_FLAC="TMP_$TRIMMED.flac"
-	FINAL_FLAC="$TRIMMED.flac"
+    DIR="$(dirname "$FILE")"
+    BASENAME="$(basename "$FILE")"
+    TRIMMED="${BASENAME%.*}"
+    EXT="${BASENAME##*.}"
 
-	#extract the cover
-	ffmpeg -y -i "$FILE" -an -vcodec copy "$TMP_COVER"
+    # Ensure file has a convertible extension
+    case "${EXT,,}" in
+        aif|aiff|wav|flac|m4a) ;;
+        *) continue ;;
+    esac
 
-	#if the file has cover art, do some extra work to preserve it
-	if test -f "$TMP_COVER"; then
+    TMP_COVER="$DIR/TMP_${TRIMMED}.jpeg"
+    TMP_TXT="$DIR/TMP_${TRIMMED}.txt"
+    TMP_FLAC="$DIR/TMP_${TRIMMED}.flac"
+    FINAL_FLAC="$DIR/${TRIMMED}.flac"
+    BAK_DIR="$DIR/FILES-BAK"
 
-		#scale the cover to 600x600px (flac breaks on anything > 600)
-		#next line is for linux
-		convert "$TMP_COVER" -resize 600 "$TMP_COVER"
+    # Extract embedded artwork if present
+    ffmpeg -y -i "$FILE" -an -vcodec copy "$TMP_COVER" -loglevel error
 
-		#write flac including the reiszed cover
-		ffmpeg -y -i "$FILE" -i "$TMP_COVER" -map 0:a -map 1:v -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (front)" -disposition:v attached_pic -c:v copy "$TMP_FLAC"
-	else
-		ffmpeg -y -i "$FILE" -c:v copy "$TMP_FLAC"
-	fi
+    if [ -s "$TMP_COVER" ]; then
+        # Resize cover to max 600x600 preserving aspect ratio (FLAC breaks on > 600px in some players)
+        if command -v magick &>/dev/null; then
+            magick "$TMP_COVER" -resize 600x600 "$TMP_COVER"
+        elif command -v convert &>/dev/null; then
+            convert "$TMP_COVER" -resize 600x600 "$TMP_COVER"
+        fi
 
-	#export tags to txt file
-	metaflac --export-tags-to="$TMP_TXT" "$TMP_FLAC"
+        # Write FLAC including resized cover art
+        ffmpeg -y -i "$FILE" -i "$TMP_COVER" -map 0:a -map 1:v \
+            -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (front)" \
+            -disposition:v attached_pic -c:v copy -c:a flac "$TMP_FLAC"
+    else
+        ffmpeg -y -i "$FILE" -c:a flac "$TMP_FLAC"
+    fi
 
-	#rename description to comment and fix key in the txt file
-	sed -i 's/DESCRIPTION=/comment=/g' "$TMP_TXT"
-	sed -i 's/TKEY=/INITIALKEY=/g' "$TMP_TXT"
+    rm -f "$TMP_COVER"
 
-	#remove previous tags (cover art is untouched)
-	metaflac --remove-all-tags "$TMP_FLAC"
+    # Remap tags with metaflac if available and the file was encoded
+    if [ -f "$TMP_FLAC" ] && command -v metaflac &>/dev/null; then
+        metaflac --export-tags-to="$TMP_TXT" "$TMP_FLAC" 2>/dev/null
+        if [ -s "$TMP_TXT" ]; then
+            # Remap DESCRIPTION -> comment and TKEY -> INITIALKEY
+            sed -i 's/DESCRIPTION=/comment=/gI' "$TMP_TXT"
+            sed -i 's/TKEY=/INITIALKEY=/gI' "$TMP_TXT"
+            metaflac --remove-all-tags "$TMP_FLAC"
+            metaflac --import-tags-from="$TMP_TXT" "$TMP_FLAC"
+        fi
+        rm -f "$TMP_TXT"
+    fi
 
-	#import tags from txt file
-	metaflac --import-tags-from="$TMP_TXT" "$TMP_FLAC"
-
-	#create FILES-BAK folder, move the original files to it
-	mkdir FILES-BAK
-	mv "$FILE" FILES-BAK
-
-	#final rename
-	mv "$TMP_FLAC" "$FINAL_FLAC"
-
-	#remove temp cover and metadata files
-	rm TMP_*
+    # Move source file to FILES-BAK only on successful encode
+    if [ -f "$TMP_FLAC" ]; then
+        mkdir -p "$BAK_DIR"
+        mv "$FILE" "$BAK_DIR/"
+        mv "$TMP_FLAC" "$FINAL_FLAC"
+        echo "[✓] Created: $FINAL_FLAC"
+        echo "[✓] Backed up original to: $BAK_DIR/$BASENAME"
+    else
+        echo "[-] Conversion failed for $FILE"
+        rm -f "$TMP_TXT"
+    fi
 done
